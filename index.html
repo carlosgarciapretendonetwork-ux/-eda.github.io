@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Legend of Zelda: Hyrule Quest HD - Castillo Extendido</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-touch-callout: none; }
+        body {
+            background-color: #0b0b0b;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            border: 4px solid #f1c40f;
+            background-color: #000;
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.5);
+        }
+        canvas { display: block; image-rendering: pixelated; }
+        
+        .screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 10, 15, 0.95);
+            z-index: 10;
+        }
+        .hidden { display: none !important; }
+        
+        h1 { color: #f1c40f; font-size: 2.5rem; text-shadow: 3px 3px #c0392b; margin-bottom: 10px; text-align: center; }
+        h2 { color: #bdc3c7; margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
+        
+        .btn {
+            background: #c0392b;
+            color: #fff;
+            border: 2px solid #f1c40f;
+            padding: 12px 28px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 10px;
+            font-family: inherit;
+            font-weight: bold;
+            transition: 0.2s;
+            border-radius: 4px;
+        }
+        .btn:hover { background: #f1c40f; color: #000; transform: scale(1.05); }
+        .btn-danger { background: #7f1d1d; border-color: #ef4444; }
+        .btn-danger:hover { background: #ef4444; color: #fff; }
+
+        .save-slots { display: flex; gap: 25px; margin-bottom: 25px; }
+        .slot-card {
+            border: 2px solid #f1c40f;
+            padding: 20px;
+            width: 240px;
+            text-align: center;
+            background: #1a1a24;
+            border-radius: 6px;
+        }
+        
+        #hud {
+            position: absolute;
+            top: 10px; left: 10px; right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 5;
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-shadow: 2px 2px #000;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 1px solid #f1c40f55;
+        }
+        .hearts { color: #e74c3c; font-size: 1.2rem; }
+        
+        #quest-box {
+            position: absolute;
+            bottom: 10px; left: 10px; right: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid #f1c40f;
+            padding: 8px 15px;
+            font-size: 0.8rem;
+            color: #f39c12;
+            z-index: 5;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #quest-toast {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(46, 204, 113, 0.95);
+            color: #000;
+            padding: 10px 20px;
+            border: 2px solid #27ae60;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            z-index: 15;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
+            text-align: center;
+        }
+        #quest-toast.show { opacity: 1; }
+
+        /* Menú de Pausa */
+        #pause-screen {
+            background: rgba(11, 11, 15, 0.95);
+            z-index: 20;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            padding: 30px;
+        }
+        .pause-panel {
+            width: 48%;
+            border: 2px solid #f1c40f;
+            background: #15151e;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .pause-panel h3 { color: #f1c40f; margin-bottom: 10px; font-size: 1.1rem; border-bottom: 1px solid #f1c40f55; width: 100%; text-align: center; padding-bottom: 5px; }
+        
+        #mapCanvas {
+            border: 2px solid #f1c40f;
+            background: #000;
+            image-rendering: pixelated;
+            margin-bottom: 10px;
+        }
+
+        .inventory-list {
+            width: 100%;
+            height: 280px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .item-slot {
+            background: #22222d;
+            border: 1px solid #f1c40f66;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Pantalla de Créditos Fin del Bosque */
+        #credits-screen {
+            background: #000;
+            z-index: 25;
+            overflow: hidden;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+        }
+        #credits-content {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 600px;
+            transition: top 0.05s linear;
+        }
+        #credits-content h2 { color: #f1c40f; font-size: 1.8rem; margin-bottom: 10px; }
+        #credits-content h3 { color: #2ecc71; font-size: 1.3rem; margin-top: 30px; margin-bottom: 5px; }
+        #credits-content p { color: #bdc3c7; font-size: 1rem; margin-bottom: 5px; }
+
+        /* Controles Táctiles */
+        #touch-controls {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 8;
+        }
+        .touch-btn {
+            position: absolute;
+            background: rgba(241, 196, 15, 0.35);
+            border: 2px solid rgba(241, 196, 15, 0.85);
+            color: #f1c40f;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            pointer-events: auto;
+            user-select: none;
+            touch-action: none;
+        }
+        .touch-btn:active { background: rgba(241, 196, 15, 0.75); }
+        
+        #btn-up { bottom: 125px; left: 85px; width: 55px; height: 55px; }
+        #btn-down { bottom: 15px; left: 85px; width: 55px; height: 55px; }
+        #btn-left { bottom: 70px; left: 25px; width: 55px; height: 55px; }
+        #btn-right { bottom: 70px; left: 145px; width: 55px; height: 55px; }
+        
+        #btn-attack { bottom: 30px; right: 25px; width: 75px; height: 75px; background: rgba(192, 57, 43, 0.65); border-color: #e74c3c; font-size: 0.85rem; }
+        #btn-shield { bottom: 115px; right: 25px; width: 65px; height: 65px; background: rgba(52, 152, 219, 0.65); border-color: #3498db; font-size: 0.75rem; }
+        #btn-pause { top: 55px; right: 15px; width: 50px; height: 50px; border-radius: 8px; font-size: 0.75rem; pointer-events: auto; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="hud" class="hidden">
+        <div>SALUD: <span id="hearts-display" class="hearts">♥♥♥</span></div>
+        <div id="zone-display">BOSQUE DE HYRULE</div>
+        <div>EQUIPO: <span id="items-display">Espada</span></div>
+    </div>
+    
+    <div id="quest-box" class="hidden">
+        <div><b>FASE <span id="phase-text">1</span> | MISIÓN <span id="quest-num">1</span>:</b> <span id="quest-text">Entra al castillo...</span></div>
+        <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; margin: 0; pointer-events: auto;" onclick="togglePause()">MAPA / PAUSA</button>
+    </div>
+
+    <div id="quest-toast">¡MISIÓN COMPLETADA!</div>
+
+    <!-- Controles Táctiles -->
+    <div id="touch-controls">
+        <div id="btn-up" class="touch-btn">▲</div>
+        <div id="btn-down" class="touch-btn">▼</div>
+        <div id="btn-left" class="touch-btn">◄</div>
+        <div id="btn-right" class="touch-btn">►</div>
+        <div id="btn-attack" class="touch-btn">ATACAR</div>
+        <div id="btn-shield" class="touch-btn">ESCUDO</div>
+        <div id="btn-pause" class="touch-btn" onclick="togglePause()">MAPA</div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <!-- Pantalla Inicio -->
+    <div id="start-screen" class="screen">
+        <h1>THE LEGEND OF ZELDA</h1>
+        <h2>HYRULE ADVENTURE HD</h2>
+        <button class="btn" onclick="startGameAudio()">TOCAR PARA EMPEZAR</button>
+        <button class="btn" style="background:#333; font-size:0.85rem;" onclick="toggleTouchMode()">CONTROLES TÁCTILES: <span id="touch-status-text">ACTIVADOS</span></button>
+    </div>
+
+    <!-- Selector de Partidas -->
+    <div id="save-screen" class="screen hidden">
+        <h2>SELECCIONA TU RANURA DE PARTIDA</h2>
+        <div class="save-slots">
+            <div class="slot-card">
+                <h3>PARTIDA 1</h3>
+                <p id="slot1-info" style="margin: 10px 0; color: #aaa;">Vacía</p>
+                <button class="btn" onclick="loadSlot(1)">JUGAR</button>
+                <button class="btn btn-danger" onclick="deleteSlot(1)">BORRAR</button>
+            </div>
+            <div class="slot-card">
+                <h3>PARTIDA 2</h3>
+                <p id="slot2-info" style="margin: 10px 0; color: #aaa;">Vacía</p>
+                <button class="btn" onclick="loadSlot(2)">JUGAR</button>
+                <button class="btn btn-danger" onclick="deleteSlot(2)">BORRAR</button>
+            </div>
+        </div>
+        <button class="btn" onclick="showStartScreen()">VOLVER</button>
+    </div>
+
+    <!-- Menú de Pausa -->
+    <div id="pause-screen" class="screen hidden">
+        <div class="pause-panel">
+            <h3>🗺️ MAPA AMPLIADO DE HYRULE</h3>
+            <canvas id="mapCanvas" width="300" height="260"></canvas>
+            <p style="font-size: 0.7rem; color: #aaa; text-align: center;">🟢 Jugador | 🏰 Castillo | 🌲 Bosques | 🏜️ Desiertos | 🌋 Montañas</p>
+        </div>
+        <div class="pause-panel">
+            <h3>🎒 INVENTARIO DE OBJETOS</h3>
+            <div class="inventory-list" id="inventory-list-container"></div>
+            <button class="btn" onclick="togglePause()">VOLVER AL JUEGO</button>
+        </div>
+    </div>
+
+    <!-- Pantalla de Créditos del Bosque -->
+    <div id="credits-screen" class="screen hidden">
+        <div id="credits-content">
+            <h2>🌲 EL BOSQUE DEL TIEMPO ESTÁ A SALVO 🌲</h2>
+            <p>~ CAPÍTULO DEL BOSQUE COMPLETADO ~</p>
+            <br>
+            <h3>DESARROLLO DE JUEGO</h3>
+            <p>Motor de Juego en HTML5 Canvas</p>
+            <p>Audio Sintetizado Retro Web Audio</p>
+            <br>
+            <h3>MÚSICA Y SONIDO</h3>
+            <p>Banda Sonora Sintetizada de Créditos</p>
+            <p>Efectos de Sonido "¡HYA!"</p>
+            <br>
+            <h3>AGRADECIMIENTOS ESPECIALES</h3>
+            <p>A la Princesa Zelda y a los Guardianes de Hyrule</p>
+            <p>Y a ti, ¡el Gran Héroe del Tiempo!</p>
+            <br><br>
+            <button class="btn" onclick="closeCredits()">CONTINUAR AL DESIERTO GERUDO</button>
+        </div>
+    </div>
+</div>
+
+<audio id="overworldMusic" src="overworld.mp3" loop></audio>
+<audio id="castleMusic" src="castillo.mp3" loop></audio>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const overworldMusic = document.getElementById('overworldMusic');
+const castleMusic = document.getElementById('castleMusic');
+
+let currentSlot = 1;
+let gameState = 'START'; 
+let touchModeEnabled = true;
+
+let link = {
+    x: 400, y: 300,
+    size: 26,
+    speed: 4.5,
+    hp: 3, maxHp: 3,
+    direction: 'down',
+    isAttacking: false,
+    isShielding: false,
+    attackTimer: 0,
+    items: ['Espada'],
+    currentZone: 'bosque',
+    phase: 1,
+    zoneIndex: 0,
+    questIndex: 0,
+    visitedZones: { bosque: true }
+};
+
+// MISIONES
+const MAIN_QUESTS = [
+    { title: "Comienzo del viaje", desc: "Abandona el bosque dirigiéndote al Este (derecha).", targetZone: "castillo_exterior" },
+    { title: "Entra al castillo", desc: "Cruza las puertas subiendo al Norte.", targetZone: "castillo_interior" },
+    { title: "Limpia el vestíbulo", desc: "Elimina a los monstruos del vestíbulo.", killEnemies: true, targetZone: "castillo_interior" },
+    { title: "Paso a la sala de armas", desc: "Dirígete a la Sala de Armas (Este).", targetZone: "castillo_sala_este" },
+    { title: "Consigue la Corona y Escudo", desc: "Coge la Corona Real y el Escudo Hyliano.", targetZone: "castillo_sala_este", requiredItem: "Corona Real" },
+    { title: "Inspecciona la biblioteca", desc: "Ve a la Biblioteca Real (Oeste) y elimina la amenaza.", killEnemies: true, targetZone: "castillo_sala_oeste" },
+    { title: "Sube por el puente", desc: "Avanza hacia el norte por el Pasillo Elevado.", targetZone: "castillo_pasillo1" },
+    { title: "Entra al Trono", desc: "Ingresa a la Gran Sala del Trono.", targetZone: "castillo_trono" },
+    { title: "Guardián del Trono", desc: "Derrota a los monstruos en el trono.", killEnemies: true, targetZone: "castillo_trono" },
+    { title: "Entregar la Corona", desc: "Acércate a la Princesa Zelda y entrégale su corona.", deliverToZelda: true, targetZone: "castillo_trono" }
+];
+
+const ZONE_QUESTS = {
+    bosque: [
+        { desc: "Bosque 1: Entra al Bosque Profundo (Oeste).", targetZone: "bosque_profundo" },
+        { desc: "Bosque 2: Elimina a los monstruos del bosque.", killEnemies: true, targetZone: "bosque_profundo" },
+        { desc: "Bosque 3: Recoge las Bayas Medicinales.", getItem: "Bayas Medicinales", targetZone: "bosque_profundo" },
+        { desc: "Bosque 4: Viaja al Claro del Bosque (Norte).", targetZone: "bosque_claro" },
+        { desc: "Bosque 5: Limpia el claro de enemigos.", killEnemies: true, targetZone: "bosque_claro" },
+        { desc: "Bosque 6: Recupera la Madera Antigua.", getItem: "Madera Antigua", targetZone: "bosque_claro" },
+        { desc: "Bosque 7: Dirígete al Bosque del Tiempo.", targetZone: "bosque" },
+        { desc: "Bosque 8: Consigue la Semilla Mágica.", getItem: "Semilla Mágica", targetZone: "bosque" },
+        { desc: "Bosque 9: Vence a las sombras finales.", killEnemies: true, targetZone: "bosque" },
+        { desc: "Bosque 10: ¡El Bosque está salvado!", targetZone: "bosque" }
+    ],
+    desierto: [
+        { desc: "Desierto 1: Viaja al sur hacia el Desierto Gerudo.", targetZone: "desierto" },
+        { desc: "Desierto 2: Sobrevive a las criaturas de arena.", killEnemies: true, targetZone: "desierto" },
+        { desc: "Desierto 3: Encuentra el Rubí del Sol.", getItem: "Rubí del Sol", targetZone: "desierto" },
+        { desc: "Desierto 4: Ve a las Dunas de la Tormenta (Sur).", targetZone: "desierto_dunas" },
+        { desc: "Desierto 5: Vence a los monstruos de las dunas.", killEnemies: true, targetZone: "desierto_dunas" },
+        { desc: "Desierto 6: Coge el Amuleto de Viento.", getItem: "Amuleto de Viento", targetZone: "desierto_dunas" },
+        { desc: "Desierto 7: Entra al Oasis Gerudo (Oeste).", targetZone: "desierto_oasis" },
+        { desc: "Desierto 8: Purifica el agua del oasis.", killEnemies: true, targetZone: "desierto_oasis" },
+        { desc: "Desierto 9: Recoge la Piedra Solar.", getItem: "Piedra Solar", targetZone: "desierto_oasis" },
+        { desc: "Desierto 10: ¡El Desierto ha sido pacificado!", targetZone: "desierto" }
+    ],
+    montana: [
+        { desc: "Montaña 1: Escala a la Montaña de la Muerte.", targetZone: "montana" },
+        { desc: "Montaña 2: Elimina los monstruos de roca.", killEnemies: true, targetZone: "montana" },
+        { desc: "Montaña 3: Coge el Arco sagrado.", getItem: "Arco", targetZone: "montana" },
+        { desc: "Montaña 4: Sube a la Cima Volcánica (Norte).", targetZone: "montana_cima" },
+        { desc: "Montaña 5: Derrota a los monstruos de fuego.", killEnemies: true, targetZone: "montana_cima" },
+        { desc: "Montaña 6: Encuentra el Mineral Goron.", getItem: "Mineral Goron", targetZone: "montana_cima" },
+        { desc: "Montaña 7: Entra a las Cavernas de Fuego (Este).", targetZone: "montana_caverna" },
+        { desc: "Montaña 8: Limpia la caverna de bestias.", killEnemies: true, targetZone: "montana_caverna" },
+        { desc: "Montaña 9: Recupera el Martillo de Piedra.", getItem: "Martillo de Piedra", targetZone: "montana_caverna" },
+        { desc: "Montaña 10: ¡La Montaña ha sido totalmente liberada!", targetZone: "montana" }
+    ],
+    castillo: [
+        { desc: "Castillo 1: Regresa a la Sala del Trono.", targetZone: "castillo_trono" },
+        { desc: "Castillo 2: Limpia el Pasillo Superior.", killEnemies: true, targetZone: "castillo_pasillo1" },
+        { desc: "Castillo 3: Busca el Cetro Real en la Biblioteca.", getItem: "Cetro Real", targetZone: "castillo_sala_oeste" },
+        { desc: "Castillo 4: Vence a los espectros en la Sala de Armas.", killEnemies: true, targetZone: "castillo_sala_este" },
+        { desc: "Castillo 5: Recupera el Amuleto Trifuerza.", getItem: "Amuleto Trifuerza", targetZone: "castillo_trono" },
+        { desc: "Castillo 6: Defiende el Exterior del Castillo.", killEnemies: true, targetZone: "castillo_exterior" },
+        { desc: "Castillo 7: Encuentra el Escudo Dorado.", getItem: "Escudo Dorado", targetZone: "castillo_sala_este" },
+        { desc: "Castillo 8: Elimina la horda final en el Trono.", killEnemies: true, targetZone: "castillo_trono" },
+        { desc: "Castillo 9: Habla con Zelda para la bendición.", deliverToZelda: true, targetZone: "castillo_trono" },
+        { desc: "Castillo 10: ¡HAS COMPLETADO TODAS LAS MISIONES DE HYRULE!", targetZone: "castillo_trono" }
+    ]
+};
+
+const ZONES_LIST = ['bosque', 'desierto', 'montana', 'castillo'];
+
+const MAPS = {
+    bosque: { name: 'Bosque del Tiempo', type: 'overworld', next: { right: 'castillo_exterior', down: 'desierto', left: 'bosque_profundo', up: 'bosque_claro' }, x: 20, y: 170, w: 70, h: 70 },
+    bosque_profundo: { name: 'Bosque Profundo', type: 'overworld', next: { right: 'bosque' }, x: 5, y: 170, w: 12, h: 70 },
+    bosque_claro: { name: 'Claro del Bosque', type: 'overworld', next: { down: 'bosque' }, x: 20, y: 120, w: 70, h: 40 },
+
+    desierto: { name: 'Desierto Gerudo', type: 'overworld', next: { up: 'bosque', right: 'montana', down: 'desierto_dunas', left: 'desierto_oasis' }, x: 210, y: 170, w: 70, h: 70 },
+    desierto_dunas: { name: 'Dunas de la Tormenta', type: 'overworld', next: { up: 'desierto' }, x: 210, y: 242, w: 70, h: 15 },
+    desierto_oasis: { name: 'Oasis Gerudo', type: 'overworld', next: { right: 'desierto' }, x: 190, y: 170, w: 18, h: 70 },
+
+    montana: { name: 'Montaña de la Muerte', type: 'overworld', next: { left: 'castillo_interior', down: 'desierto', up: 'montana_cima', right: 'montana_caverna' }, x: 115, y: 10, w: 70, h: 40 },
+    montana_cima: { name: 'Cima Volcánica', type: 'overworld', next: { down: 'montana' }, x: 115, y: 2, w: 70, h: 6 },
+    montana_caverna: { name: 'Caverna de Fuego', type: 'overworld', next: { left: 'montana' }, x: 187, y: 10, w: 20, h: 40 },
+
+    castillo_exterior: { name: 'Exterior del Castillo', type: 'castle', next: { left: 'bosque', up: 'castillo_interior', right: 'desierto' }, x: 115, y: 170, w: 70, h: 70 },
+    castillo_interior: { name: 'Vestíbulo del Castillo', type: 'castle', next: { down: 'castillo_exterior', up: 'castillo_pasillo1', right: 'castillo_sala_este', left: 'castillo_sala_oeste' }, x: 115, y: 110, w: 70, h: 50 },
+    castillo_sala_este: { name: 'Sala de Armas', type: 'castle', next: { left: 'castillo_interior' }, x: 195, y: 110, w: 50, h: 50 },
+    castillo_sala_oeste: { name: 'Biblioteca Real', type: 'castle', next: { right: 'castillo_interior' }, x: 55, y: 110, w: 50, h: 50 },
+    castillo_pasillo1: { name: 'Pasillo Elevado', type: 'overworld', next: { down: 'castillo_interior', up: 'castillo_trono' }, x: 130, y: 80, w: 40, h: 25 },
+    castillo_trono: { name: 'Sala del Trono', type: 'castle', next: { down: 'castillo_pasillo1', right: 'montana' }, x: 115, y: 55, w: 70, h: 20 }
+};
+
+let enemies = [];
+let worldItems = [];
+let zeldaNPC = null;
+let audioCtx = null;
+let creditsMusicInterval = null;
+let creditsAnimationTimer = null;
+
+function startGameAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    showSaveSelect();
+}
+
+function toggleTouchMode() {
+    touchModeEnabled = !touchModeEnabled;
+    document.getElementById('touch-controls').style.display = touchModeEnabled ? 'block' : 'none';
+    document.getElementById('touch-status-text').innerText = touchModeEnabled ? 'ACTIVADOS' : 'DESACTIVADOS';
+}
+
+function updateMusic(zoneKey) {
+    if (gameState === 'CREDITS') return;
+    const zoneType = MAPS[zoneKey].type;
+    if (zoneType === 'castle') {
+        overworldMusic.pause();
+        castleMusic.play().catch(e => {});
+    } else {
+        castleMusic.pause();
+        overworldMusic.play().catch(e => {});
+    }
+}
+
+function fnPlaySound(type) {
+    if (!audioCtx) return;
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'sword') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(450, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.12);
+
+            const hyaOsc = audioCtx.createOscillator();
+            const hyaGain = audioCtx.createGain();
+            hyaOsc.connect(hyaGain);
+            hyaGain.connect(audioCtx.destination);
+            hyaOsc.type = 'triangle';
+            hyaOsc.frequency.setValueAtTime(520, audioCtx.currentTime);
+            hyaOsc.frequency.exponentialRampToValueAtTime(280, audioCtx.currentTime + 0.15);
+            hyaGain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            hyaGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            hyaOsc.start(); hyaOsc.stop(audioCtx.currentTime + 0.15);
+
+        } else if (type === 'hit') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+        } else if (type === 'item') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12);
+            osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.24);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        } else if (type === 'shield') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+    } catch(e) {}
+}
+
+// 🎶 MÚSICA SINTETIZADA PERSONALIZADA PARA LOS CRÉDITOS
+function playCreditsMusicNote(freq, duration) {
+    if (!audioCtx) return;
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    } catch(e){}
+}
+
+function startCreditsMusic() {
+    overworldMusic.pause();
+    castleMusic.pause();
+    const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23, 392.00, 293.66];
+    let noteIdx = 0;
+    creditsMusicInterval = setInterval(() => {
+        playCreditsMusicNote(notes[noteIdx], 0.4);
+        noteIdx = (noteIdx + 1) % notes.length;
+    }, 350);
+}
+
+function stopCreditsMusic() {
+    if (creditsMusicInterval) clearInterval(creditsMusicInterval);
+}
+
+// 🎬 SECUENCIA DE CRÉDITOS
+function triggerForestCredits() {
+    gameState = 'CREDITS';
+    document.getElementById('credits-screen').classList.remove('hidden');
+    startCreditsMusic();
+
+    const content = document.getElementById('credits-content');
+    let topPos = 600;
+    content.style.top = topPos + 'px';
+
+    creditsAnimationTimer = setInterval(() => {
+        topPos -= 1.5;
+        content.style.top = topPos + 'px';
+        if (topPos < -350) topPos = 600; // Bucle suave de los créditos
+    }, 30);
+}
+
+function closeCredits() {
+    stopCreditsMusic();
+    if (creditsAnimationTimer) clearInterval(creditsAnimationTimer);
+    document.getElementById('credits-screen').classList.add('hidden');
+    gameState = 'PLAYING';
+    updateMusic(link.currentZone);
+}
+
+function getCurrentQuest() {
+    if (link.phase === 1) {
+        return MAIN_QUESTS[link.questIndex];
+    } else {
+        const zoneKey = ZONES_LIST[link.zoneIndex];
+        return ZONE_QUESTS[zoneKey][link.questIndex];
+    }
+}
+
+function initZone(zoneKey) {
+    link.currentZone = zoneKey;
+    link.visitedZones[zoneKey] = true;
+    const zoneData = MAPS[zoneKey];
+    
+    document.getElementById('zone-display').innerText = zoneData.name.toUpperCase();
+    updateQuestDisplay();
+    updateMusic(zoneKey);
+    
+    enemies = [
+        { x: 250, y: 200, hp: 2, dirX: 1, dirY: 1, speed: 1.8 },
+        { x: 550, y: 400, hp: 2, dirX: -1, dirY: 1, speed: 1.8 }
+    ];
+
+    worldItems = [];
+    const q = getCurrentQuest();
+
+    if (zoneKey === 'castillo_sala_este') {
+        if (!link.items.includes('Corona Real')) worldItems.push({ x: 400, y: 250, name: 'Corona Real', color: '#f1c40f' });
+        if (!link.items.includes('Escudo Hyliano')) worldItems.push({ x: 300, y: 250, name: 'Escudo Hyliano', color: '#3498db' });
+    }
+
+    if (q && q.getItem && zoneKey === q.targetZone && !link.items.includes(q.getItem)) {
+        worldItems.push({ x: 400, y: 300, name: q.getItem, color: '#e67e22' });
+    }
+
+    if (zoneKey === 'castillo_trono') {
+        zeldaNPC = { x: 400, y: 110 };
+    } else {
+        zeldaNPC = null;
+    }
+
+    checkQuestProgress();
+}
+
+function updateQuestDisplay() {
+    const q = getCurrentQuest();
+    document.getElementById('phase-text').innerText = link.phase === 1 ? "1 (Historia)" : `2 (${ZONES_LIST[link.zoneIndex].toUpperCase()})`;
+    document.getElementById('quest-num').innerText = link.questIndex + 1;
+    document.getElementById('quest-text').innerText = q ? q.desc : "¡Hyrule está libre!";
+}
+
+function showToast(text) {
+    const toast = document.getElementById('quest-toast');
+    toast.innerText = text;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function checkQuestProgress() {
+    const q = getCurrentQuest();
+    if (!q) return;
+    let completed = false;
+
+    if (link.currentZone === q.targetZone) {
+        if (q.killEnemies) {
+            if (enemies.length === 0) completed = true;
+        } else if (q.requiredItem) {
+            if (link.items.includes(q.requiredItem)) completed = true;
+        } else if (q.getItem) {
+            if (link.items.includes(q.getItem)) completed = true;
+        } else if (q.deliverToZelda) {
+            if (zeldaNPC && Math.hypot(link.x - zeldaNPC.x, link.y - zeldaNPC.y) < 50) completed = true;
+        } else {
+            completed = true;
+        }
+    }
+
+    if (completed) {
+        fnPlaySound('item');
+
+        if (link.phase === 1 && link.questIndex === MAIN_QUESTS.length - 1) {
+            link.phase = 2;
+            link.zoneIndex = 0;
+            link.questIndex = 0;
+            showToast("👑 ¡CORONA ENTREGADA! ¡MISIONES DE ZONAS DESBLOQUEADAS!");
+        } else {
+            showToast(`¡MISIÓN COMPLETADA!`);
+            link.questIndex++;
+
+            // DETECTOR DEL FINAL DEL BOSQUE PARA ACTIVAR LOS CRÉDITOS
+            if (link.phase === 2 && ZONES_LIST[link.zoneIndex] === 'bosque' && link.questIndex >= 10) {
+                link.questIndex = 0;
+                link.zoneIndex++;
+                triggerForestCredits(); // Lanza créditos personalizados
+            } else if (link.phase === 2 && link.questIndex >= 10) {
+                link.questIndex = 0;
+                link.zoneIndex++;
+                if (link.zoneIndex >= ZONES_LIST.length) {
+                    showToast("🎉 ¡HAS PACIFICADO TODO HYRULE!");
+                }
+            }
+        }
+        updateQuestDisplay();
+        saveGame();
+    }
+}
+
+// CONTROLES DE TECLADO Y TÁCTILES
+const keys = {};
+
+window.addEventListener('keydown', e => {
+    if (e.key === 'Control') {
+        if (link.items.includes('Escudo Hyliano') || link.items.includes('Escudo')) {
+            if (!link.isShielding) fnPlaySound('shield');
+            link.isShielding = true;
+        }
+    }
+    keys[e.key] = true;
+    if (e.key === ' ' && gameState === 'PLAYING' && !link.isAttacking) triggerAttack();
+    if ((e.key.toLowerCase() === 'escape' || e.key === 'p') && (gameState === 'PLAYING' || gameState === 'PAUSED')) togglePause();
+});
+
+window.addEventListener('keyup', e => {
+    if (e.key === 'Control') link.isShielding = false;
+    keys[e.key] = false;
+});
+
+function triggerAttack() {
+    if (!link.isAttacking && gameState === 'PLAYING') {
+        link.isAttacking = true;
+        link.attackTimer = 12;
+        fnPlaySound('sword');
+    }
+}
+
+function setupTouchControls() {
+    const bindBtn = (id, keyName) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        const press = (e) => { e.preventDefault(); keys[keyName] = true; };
+        const release = (e) => { e.preventDefault(); keys[keyName] = false; };
+
+        el.addEventListener('touchstart', press, { passive: false });
+        el.addEventListener('touchend', release, { passive: false });
+        el.addEventListener('touchcancel', release, { passive: false });
+        el.addEventListener('mousedown', press);
+        el.addEventListener('mouseup', release);
+    };
+
+    bindBtn('btn-up', 'ArrowUp');
+    bindBtn('btn-down', 'ArrowDown');
+    bindBtn('btn-left', 'ArrowLeft');
+    bindBtn('btn-right', 'ArrowRight');
+
+    const btnAttack = document.getElementById('btn-attack');
+    if (btnAttack) {
+        btnAttack.addEventListener('touchstart', e => { e.preventDefault(); triggerAttack(); }, { passive: false });
+        btnAttack.addEventListener('mousedown', e => triggerAttack());
+    }
+
+    const btnShield = document.getElementById('btn-shield');
+    if (btnShield) {
+        const shieldOn = (e) => {
+            e.preventDefault();
+            if (link.items.includes('Escudo Hyliano') || link.items.includes('Escudo')) {
+                link.isShielding = true;
+                fnPlaySound('shield');
+            }
+        };
+        const shieldOff = (e) => { e.preventDefault(); link.isShielding = false; };
+        btnShield.addEventListener('touchstart', shieldOn, { passive: false });
+        btnShield.addEventListener('touchend', shieldOff, { passive: false });
+        btnShield.addEventListener('mousedown', shieldOn);
+        btnShield.addEventListener('mouseup', shieldOff);
+    }
+}
+setupTouchControls();
+
+// MENÚ DE PAUSA
+function togglePause() {
+    if (gameState === 'PLAYING') {
+        gameState = 'PAUSED';
+        document.getElementById('pause-screen').classList.remove('hidden');
+        renderPixelArtMap();
+        renderInventoryList();
+    } else if (gameState === 'PAUSED') {
+        gameState = 'PLAYING';
+        document.getElementById('pause-screen').classList.add('hidden');
+    }
+}
+
+function renderPixelArtMap() {
+    const mapCanvas = document.getElementById('mapCanvas');
+    const mctx = mapCanvas.getContext('2d');
+    mctx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+    mctx.fillStyle = '#111827';
+    mctx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+    mctx.strokeStyle = '#1f2937';
+    mctx.lineWidth = 1;
+    for(let x=0; x<300; x+=10) { mctx.beginPath(); mctx.moveTo(x, 0); mctx.lineTo(x, 260); mctx.stroke(); }
+    for(let y=0; y<260; y+=10) { mctx.beginPath(); mctx.moveTo(0, y); mctx.lineTo(300, y); mctx.stroke(); }
+
+    mctx.strokeStyle = '#d97706';
+    mctx.lineWidth = 3;
+    mctx.beginPath(); mctx.moveTo(55, 205); mctx.lineTo(245, 205); mctx.stroke();
+    mctx.beginPath(); mctx.moveTo(150, 205); mctx.lineTo(150, 65); mctx.stroke();
+    mctx.beginPath(); mctx.moveTo(80, 135); mctx.lineTo(220, 135); mctx.stroke();
+
+    Object.keys(MAPS).forEach(key => {
+        const m = MAPS[key];
+        const isCurrent = (link.currentZone === key);
+        const isVisited = link.visitedZones[key];
+
+        mctx.fillStyle = isCurrent ? '#ef4444' : (isVisited ? '#2563eb' : '#374151');
+        mctx.fillRect(m.x, m.y, m.w, m.h);
+
+        mctx.strokeStyle = isCurrent ? '#f1c40f' : '#6b7280';
+        mctx.lineWidth = 2;
+        mctx.strokeRect(m.x, m.y, m.w, m.h);
+
+        if (isVisited || isCurrent) {
+            mctx.fillStyle = '#ffffff';
+            mctx.font = '8px monospace';
+            mctx.fillText(m.name.substring(0, 8), m.x + 2, m.y + 12);
+        }
+    });
+
+    const currentM = MAPS[link.currentZone];
+    if (currentM) {
+        mctx.fillStyle = '#10b981';
+        mctx.fillRect(currentM.x + currentM.w/2 - 4, currentM.y + currentM.h/2 - 4, 8, 8);
+    }
+}
+
+function renderInventoryList() {
+    const invListElem = document.getElementById('inventory-list-container');
+    invListElem.innerHTML = '';
+    link.items.forEach(itName => {
+        const slotDiv = document.createElement('div');
+        slotDiv.className = 'item-slot';
+        slotDiv.innerHTML = `🛡️ <b>${itName}</b>`;
+        invListElem.appendChild(slotDiv);
+    });
+}
+
+function updateSaveSlotsUI() {
+    for (let i = 1; i <= 2; i++) {
+        const data = localStorage.getItem('zelda_save_slot_' + i);
+        const infoElem = document.getElementById(`slot${i}-info`);
+        if (data) {
+            const parsed = JSON.parse(data);
+            infoElem.innerHTML = `Fase: ${parsed.phase || 1}<br>Corazones: ${parsed.hp}/${parsed.maxHp}`;
+        } else {
+            infoElem.innerText = 'Vacía';
+        }
+    }
+}
+
+function showSaveSelect() {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('save-screen').classList.remove('hidden');
+    updateSaveSlotsUI();
+}
+
+function showStartScreen() {
+    document.getElementById('save-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+}
+
+function loadSlot(slot) {
+    currentSlot = slot;
+    const data = localStorage.getItem('zelda_save_slot_' + slot);
+    if (data) {
+        link = JSON.parse(data);
+    } else {
+        link = {
+            x: 400, y: 300, size: 26, speed: 4.5,
+            hp: 3, maxHp: 3, direction: 'down',
+            isAttacking: false, isShielding: false, attackTimer: 0,
+            items: ['Espada'], currentZone: 'bosque',
+            phase: 1, zoneIndex: 0, questIndex: 0, visitedZones: { bosque: true }
+        };
+    }
+    initZone(link.currentZone);
+    document.getElementById('save-screen').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('quest-box').classList.remove('hidden');
+    if(touchModeEnabled) document.getElementById('touch-controls').style.display = 'block';
+    gameState = 'PLAYING';
+}
+
+function saveGame() {
+    localStorage.setItem('zelda_save_slot_' + currentSlot, JSON.stringify(link));
+}
+
+function deleteSlot(slot) {
+    localStorage.removeItem('zelda_save_slot_' + slot);
+    updateSaveSlotsUI();
+}
+
+// BUCLE PRINCIPAL DE JUEGO
+function update() {
+    if (gameState !== 'PLAYING') return;
+
+    if (!link.isShielding) {
+        if (keys['ArrowUp'] || keys['w']) { link.y -= link.speed; link.direction = 'up'; }
+        if (keys['ArrowDown'] || keys['s']) { link.y += link.speed; link.direction = 'down'; }
+        if (keys['ArrowLeft'] || keys['a']) { link.x -= link.speed; link.direction = 'left'; }
+        if (keys['ArrowRight'] || keys['d']) { link.x += link.speed; link.direction = 'right'; }
+    }
+
+    if (link.isAttacking) {
+        link.attackTimer--;
+        if (link.attackTimer <= 0) link.isAttacking = false;
+    }
+
+    const zone = MAPS[link.currentZone];
+    if (link.x < 20) {
+        if (zone.next.left) { link.x = canvas.width - 40; initZone(zone.next.left); }
+        else link.x = 20;
+    }
+    if (link.x > canvas.width - 20) {
+        if (zone.next.right) { link.x = 40; initZone(zone.next.right); }
+        else link.x = canvas.width - 20;
+    }
+    if (link.y < 20) {
+        if (zone.next.up) { link.y = canvas.height - 40; initZone(zone.next.up); }
+        else link.y = 20;
+    }
+    if (link.y > canvas.height - 20) {
+        if (zone.next.down) { link.y = 40; initZone(zone.next.down); }
+        else link.y = canvas.height - 20;
+    }
+
+    enemies.forEach((e, index) => {
+        e.x += e.dirX * e.speed;
+        e.y += e.dirY * e.speed;
+        if (e.x < 40 || e.x > canvas.width - 40) e.dirX *= -1;
+        if (e.y < 40 || e.y > canvas.height - 40) e.dirY *= -1;
+
+        if (link.isAttacking) {
+            let swordX = link.x, swordY = link.y;
+            if (link.direction === 'up') swordY -= 35;
+            if (link.direction === 'down') swordY += 35;
+            if (link.direction === 'left') swordX -= 35;
+            if (link.direction === 'right') swordX += 35;
+
+            if (Math.hypot(swordX - e.x, swordY - e.y) < 32) {
+                e.hp--;
+                fnPlaySound('hit');
+                if (e.hp <= 0) {
+                    enemies.splice(index, 1);
+                    checkQuestProgress();
+                }
+            }
+        }
+
+        if (Math.hypot(link.x - e.x, link.y - e.y) < 24) {
+            if (link.isShielding) {
+                fnPlaySound('shield');
+                link.x += (link.x - e.x) * 0.8;
+                link.y += (link.y - e.y) * 0.8;
+            } else {
+                link.hp--;
+                fnPlaySound('hit');
+                link.x += (link.x - e.x) * 1.5;
+                link.y += (link.y - e.y) * 1.5;
+                if (link.hp <= 0) {
+                    showToast('¡Has caído! Regenerando...');
+                    loadSlot(currentSlot);
+                }
+            }
+        }
+    });
+
+    worldItems.forEach((item, index) => {
+        if (Math.hypot(link.x - item.x, link.y - item.y) < 30) {
+            link.items.push(item.name);
+            fnPlaySound('item');
+            showToast(`¡Has conseguido: ${item.name}!`);
+            worldItems.splice(index, 1);
+            checkQuestProgress();
+        }
+    });
+
+    if (zeldaNPC && Math.hypot(link.x - zeldaNPC.x, link.y - zeldaNPC.y) < 45) {
+        checkQuestProgress();
+    }
+
+    document.getElementById('hearts-display').innerText = '♥'.repeat(Math.max(0, link.hp));
+    document.getElementById('items-display').innerText = link.items.join(', ');
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (link.currentZone.includes('bosque')) {
+        ctx.fillStyle = '#1b4d3e'; ctx.fillRect(0, 0, 800, 600);
+        ctx.fillStyle = '#14382c';
+        for(let i=50; i<800; i+=120) {
+            ctx.beginPath(); ctx.arc(i, 80, 40, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(i, 520, 40, 0, Math.PI*2); ctx.fill();
+        }
+    } else if (link.currentZone === 'castillo_exterior') {
+        ctx.fillStyle = '#4a6b82'; ctx.fillRect(0, 0, 800, 600);
+        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(280, 0, 240, 600);
+        ctx.fillStyle = '#34495e'; ctx.fillRect(200, 40, 400, 200);
+        ctx.fillStyle = '#1a252f'; ctx.fillRect(350, 130, 100, 110);
+    } else if (link.currentZone === 'castillo_interior') {
+        ctx.fillStyle = '#595959'; ctx.fillRect(0, 0, 800, 600);
+        ctx.strokeStyle = '#404040'; ctx.lineWidth = 2;
+        for(let x=0; x<800; x+=50) {
+            for(let y=0; y<600; y+=50) { ctx.strokeRect(x, y, 50, 50); }
+        }
+    } else if (link.currentZone === 'castillo_sala_este') {
+        ctx.fillStyle = '#4a4a4a'; ctx.fillRect(0, 0, 800, 600);
+    } else if (link.currentZone === 'castillo_sala_oeste') {
+        ctx.fillStyle = '#3d2b1f'; ctx.fillRect(0, 0, 800, 600);
+    } else if (link.currentZone === 'castillo_pasillo1') {
+        ctx.fillStyle = '#2c3e50'; ctx.fillRect(0, 0, 800, 600);
+        ctx.fillStyle = '#bdc3c7'; ctx.fillRect(250, 0, 300, 600);
+    } else if (link.currentZone === 'castillo_trono') {
+        ctx.fillStyle = '#2c1810'; ctx.fillRect(0, 0, 800, 600);
+        ctx.fillStyle = '#922b21'; ctx.fillRect(300, 0, 200, 600);
+        ctx.fillStyle = '#d4ac0d'; ctx.fillRect(340, 60, 120, 80);
+    } else if (link.currentZone.includes('desierto')) {
+        ctx.fillStyle = '#c29b38'; ctx.fillRect(0, 0, 800, 600);
+    } else if (link.currentZone.includes('montana')) {
+        ctx.fillStyle = '#7a3b2e'; ctx.fillRect(0, 0, 800, 600);
+    }
+
+    if (gameState !== 'PLAYING') return;
+
+    if (zeldaNPC) {
+        ctx.fillStyle = '#e84393';
+        ctx.fillRect(zeldaNPC.x - 12, zeldaNPC.y - 12, 24, 24);
+        ctx.fillStyle = '#fdcb6e';
+        ctx.fillRect(zeldaNPC.x - 10, zeldaNPC.y - 18, 20, 8);
+    }
+
+    worldItems.forEach(item => {
+        ctx.fillStyle = item.color;
+        ctx.beginPath(); ctx.arc(item.x, item.y, 14, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    });
+
+    enemies.forEach(e => {
+        ctx.fillStyle = '#c0392b';
+        ctx.fillRect(e.x - 14, e.y - 14, 28, 28);
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(e.x - 8, e.y - 6, 4, 4);
+        ctx.fillRect(e.x + 4, e.y - 6, 4, 4);
+    });
+
+    // Link
+    ctx.fillStyle = '#27ae60';
+    ctx.fillRect(link.x - 12, link.y - 12, 24, 24);
+    ctx.fillStyle = '#f39c12';
+    ctx.fillRect(link.x - 8, link.y - 18, 16, 8);
+
+    if (link.isShielding) {
+        ctx.strokeStyle = '#3498db';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(link.x, link.y, 22, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(52, 152, 219, 0.3)';
+        ctx.fill();
+    }
+
+    if (link.isAttacking) {
+        ctx.fillStyle = '#ecf0f1';
+        if (link.direction === 'up') ctx.fillRect(link.x - 4, link.y - 36, 8, 22);
+        if (link.direction === 'down') ctx.fillRect(link.x - 4, link.y + 14, 8, 22);
+        if (link.direction === 'left') ctx.fillRect(link.x - 36, link.y - 4, 22, 8);
+        if (link.direction === 'right') ctx.fillRect(link.x + 14, link.y - 4, 22, 8);
+    }
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
